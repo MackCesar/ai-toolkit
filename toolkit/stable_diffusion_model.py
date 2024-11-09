@@ -108,7 +108,11 @@ class BlankNetwork:
 
 
 def flush():
-    torch.cuda.empty_cache()
+    """Clears memory and collects garbage."""
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+    elif torch.has_mps:
+        torch.mps.empty_cache()
     gc.collect()
 
 
