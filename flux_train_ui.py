@@ -23,9 +23,10 @@ scaler = amp.GradScaler()
 sys.path.insert(0, "ai-toolkit")
 from toolkit.job import get_job
 
-MAX_IMAGES = 150
+MAX_IMAGES = 500
 
-
+import multiprocessing
+multiprocessing.set_start_method("fork", force=True)
 def load_captioning(uploaded_files, concept_sentence):
     uploaded_images = [file for file in uploaded_files if not file.endswith('.txt')]
     txt_files = [file for file in uploaded_files if file.endswith('.txt')]
@@ -70,16 +71,18 @@ def hide_captioning():
 
 def create_dataset(*inputs):
     print("Creating dataset")
-    images = inputs[0]
+    images = inputs[0]  # The first element in inputs is the list of images
     destination_folder = str(f"datasets/{uuid.uuid4()}")
     if not os.path.exists(destination_folder):
         os.makedirs(destination_folder)
 
-    jsonl_file_path = os.path.join(destination_folder, "metadata.jsonl")
+    jsonl_file_path = os.path.join(destination_folder, "metadata.json")
     with open(jsonl_file_path, "a") as jsonl_file:
         for index, image in enumerate(images):
+            # Safely retrieve the caption
+            original_caption = inputs[index + 1] if index + 1 < len(inputs) else "No caption provided"
+
             new_image_path = shutil.copy(image, destination_folder)
-            original_caption = inputs[index + 1]
             file_name = os.path.basename(new_image_path)
             data = {"file_name": file_name, "prompt": original_caption}
             jsonl_file.write(json.dumps(data) + "\n")
@@ -307,9 +310,9 @@ with gr.Blocks(theme=theme, css=css) as demo:
             lr = gr.Number(label="Learning Rate", value=4e-4, minimum=1e-6, maximum=1e-3, step=1e-6)
             rank = gr.Number(label="LoRA Rank", value=16, minimum=4, maximum=128, step=4)
             model_to_train = gr.Radio(["dev", "schnell"], value="dev", label="Model to train")
-            low_vram = gr.Checkbox(label="Low VRAM", value=True)
-            with gr.Accordion("Even more advanced options", open=False):
-                use_more_advanced_options = gr.Checkbox(label="Use more advanced options", value=False)
+            low_vram = gr.Checkbox(label="Low VRAM", value=False)
+            with gr.Accordion("Even more advanced options", open=True):
+                use_more_advanced_options = gr.Checkbox(label="Use more advanced options", value=True)
                 more_advanced_options = gr.Code(config_yaml, language="yaml")
 
         with gr.Accordion("Sample prompts (optional)", visible=False) as sample:

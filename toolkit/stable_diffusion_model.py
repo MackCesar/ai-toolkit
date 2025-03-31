@@ -111,7 +111,7 @@ def flush():
     """Clears memory and collects garbage."""
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
-    elif torch.has_mps:
+    elif torch.backends.mps.is_built:
         torch.mps.empty_cache()
     gc.collect()
 
